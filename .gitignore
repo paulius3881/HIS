@@ -9,4 +9,5 @@
 /var/
 /vendor/
 ./env
+
 ###< symfony/framework-bundle ###
