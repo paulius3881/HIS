@@ -8,7 +8,5 @@
 /src/.preload.php
 /var/
 /vendor/
-./.env
 .env
-
 ###< symfony/framework-bundle ###
