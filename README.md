@@ -1,4 +1,4 @@
-# Hairdress Information System
+# Hairdresser Information System
 
 **Useful commands:**
 * build `docker-compose build`
