@@ -18,8 +18,7 @@ build:
 .PHONY:
 run: ## Start docker containers
 	@cd docker && \
-	docker-compose up -d && \
-	docker run -p 8000 -e BASE_URL=/swagger -e SWAGGER_JSON=./swagger/swagger.json -v /bar:/foo swaggerapi/swagger-ui
+	docker-compose up -d
 
 .PHONY:
 stop: ## Stop docker containers
