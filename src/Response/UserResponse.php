@@ -24,13 +24,13 @@ class UserResponse extends JsonResponse
             $data[] =
                 [
                     'id' => $user->getId(),
-                    'name' => $user->getName()
+                    'name' => $user->getName(),
+                    'surname' =>$user->getSurname(),
+                    'dateOfBirth' =>$user->getDateOfBirth(),
+                    'role' =>$user->getRole(),
                 ];
         }
-        return
-            [
-                'data' => $data,
-            ];
+        return $data;
     }
 
     public function status()

@@ -22,7 +22,7 @@ class Visit
     private $time;
 
     /**
-     * @ORM\ManyToOne(targetEntity="User")
+     * @ORM\ManyToOne(targetEntity="User", inversedBy="visits")
      * @ORM\JoinColumn(nullable=false)
      */
     private $client;
