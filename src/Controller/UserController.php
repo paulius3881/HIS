@@ -33,14 +33,29 @@ class UserController extends AbstractController
 
     /**
      * @Route("/users/{userId}", name="get-user", methods={"GET"})
+     *
+     * @param int $userId
+     * @return JsonResponse
      */
-    public function getOneUser()
+    public function getOneUser(int $userId)
     {
-        return new JsonResponse(
-            [
-                'status' => 'OK'
-            ]
-        );
+        $response = new JsonResponse();
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+        if (!empty($user)) {
+            $response->setData(
+                [
+                    'id' => $user->getId(),
+                    'name' => $user->getName(),
+                    'surname' => $user->getSurname(),
+                    'dateOfBirth' => $user->getDateOfBirth(),
+                    'role' => $user->getRole(),
+                ]
+            );
+        } else {
+            $response->setStatusCode(404);
+        }
+
+        return $response;
     }
 
     /**

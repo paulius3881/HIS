@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Repository\UserRepository;
 use App\Repository\VisitRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -15,39 +16,86 @@ class VisitController extends AbstractController
     /** @var VisitRepository */
     private $visitRepository;
 
+    /** @var UserRepository */
+    private $userRepository;
+
     public function __construct(
-        VisitRepository $visitRepository
+        VisitRepository $visitRepository,
+        UserRepository $userRepository
     )
     {
         $this->visitRepository = $visitRepository;
+        $this->userRepository = $userRepository;
     }
 
     /**
-     * @Route("/visits", name="get-visits-list", methods={"GET"})
+     * @Route("/users/{userId}/visits", name="get-visits-list", methods={"GET"})
+     *
+     * @param int $userId
+     * @return JsonResponse
      */
-    public function getVisitsList()
+    public function getVisitsList(int $userId)
     {
-        return new JsonResponse(
-            [
-                'status' => 'OK'
-            ]
-        );
+        $response = new JsonResponse();
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $visits = [];
+        if (!empty($user)) {
+            $visits = $user->getVisits();
+        } else {
+            $response->setStatusCode(404);
+        }
+        $data = [];
+        foreach ($visits as $visit) {
+
+            $data[] =
+                [
+                    'id' => $visit->getId(),
+                    'time' => $visit->getTime(),
+                    'serviceId' => $visit->getService()->getId(),
+                    'workerId' => $visit->getWorker()->getId(),
+                    'clientId' => $visit->getClient()->getId(),
+                ];
+        }
+        if (empty($data)) {
+            $response->setStatusCode(404);
+        }
+
+        return $response->setData($data);
     }
 
     /**
-     * @Route("/visits/{visitId}", name="get-visit", methods={"GET"})
+     * @Route("/users/{userId}/visits/{visitId}", name="get-visit", methods={"GET"})
+     *
+     * @param int $visitId
+     * @param int $userId
+     * @return JsonResponse
      */
-    public function getOneVisit()
+    public function getOneVisit(int $visitId, int $userId)
     {
-        return new JsonResponse(
-            [
-                'status' => 'OK'
-            ]
-        );
+        $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
+        $response = new JsonResponse();
+        if (!empty($visit)) {
+            if ($visit->getClient()->getId() == $userId) {
+                $response->setData(
+                    [
+                        'id' => $visit->getId(),
+                        'time' => $visit->getTime(),
+                        'serviceId' => $visit->getService()->getId(),
+                        'workerId' => $visit->getWorker()->getId(),
+                        'clientId' => $visit->getClient()->getId(),
+                    ]
+                );
+            } else {
+                $response->setStatusCode(404);
+            }
+        } else {
+            $response->setStatusCode(404);
+        }
+        return $response;
     }
 
     /**
-     * @Route("/visits", name="add-visit", methods={"POST"})
+     * @Route("/users/{userId}/visits", name="add-visit", methods={"POST"})
      */
     public function addVisit()
     {
@@ -59,7 +107,7 @@ class VisitController extends AbstractController
     }
 
     /**
-     * @Route("/visits/{visitId}", name="delete-visit", methods={"DELETE"})
+     * @Route("/users/{userId}/visits/{visitId}", name="delete-visit", methods={"DELETE"})
      */
     public function deleteVisit()
     {
@@ -71,7 +119,7 @@ class VisitController extends AbstractController
     }
 
     /**
-     * @Route("/visits/{visitId}", name="update-visit", methods={"PUT"})
+     * @Route("/users/{userId}/visits/{visitId}", name="update-visit", methods={"PUT"})
      */
     public function updateVisit()
     {

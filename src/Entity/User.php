@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\UserRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 /**
@@ -10,6 +12,12 @@ use Doctrine\ORM\Mapping as ORM;
  */
 class User
 {
+
+    public function __construct()
+    {
+        $this->visits = new ArrayCollection();
+    }
+
     /**
      * @ORM\Id()
      * @ORM\GeneratedValue()
@@ -36,6 +44,11 @@ class User
      * @ORM\Column(type="string", nullable=false)
      */
     private $role;
+
+    /**
+     * @ORM\OneToMany(targetEntity="Visit", mappedBy="client", cascade={"persist"})
+     */
+    private $visits;
 
     /**
      * @return int|null
@@ -107,5 +120,13 @@ class User
     public function setRole(string $role): void
     {
         $this->role = $role;
+    }
+
+    /**
+     * @return Collection|Visit[]
+     */
+    public function getVisits(): Collection
+    {
+        return $this->visits;
     }
 }
