@@ -163,6 +163,7 @@ class ServiceController extends AbstractController
                         $visit->setService($service);
                         $this->entityManagerInterface->persist($visit);
                         $this->entityManagerInterface->flush();
+                        $response->setStatusCode(201);
                     }
                 } else {
                     return $response->setData(['errorMessage' => 'Bad parameter']);
@@ -179,25 +180,102 @@ class ServiceController extends AbstractController
 
     /**
      * @Route("/users/{userId}/visits/{visitId}/services/{serviceId}", name="delete-service", methods={"DELETE"})
+     *
+     * @param int $userId
+     * @param int $visitId
+     * @param int $serviceId
+     * @return JsonResponse
      */
-    public function deleteService()
+    public function deleteService(int $userId, int $visitId, int $serviceId)
     {
-        return new JsonResponse(
-            [
-                'status' => 'OK'
-            ]
-        );
+        $response = new JsonResponse();
+
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $found = false;
+        if (!empty($user)) {
+            $visits = $user->getVisits();
+            if (!empty($visits)) {
+                foreach ($visits as $visit) {
+
+                    if ($visit->getId() == $visitId) {
+                        $service = $visit->getService();
+                        if (!empty($service)) {
+                            if ($service->getId() == $serviceId) {
+                                $visit->setService(null);
+                                $found = true;
+                                $this->entityManagerInterface->persist($visit);
+                                $this->entityManagerInterface->flush();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($found) {
+            $response->setStatusCode(200);
+        } else {
+            $response->setStatusCode(404);
+        }
+        return $response;
     }
 
     /**
      * @Route("/users/{userId}/visits/{visitId}/services/{serviceId}", name="update-service", methods={"PUT"})
+     *
+     * @param Request $request
+     * @param int $userId
+     * @param int $visitId
+     * @param int $serviceId
+     * @return JsonResponse
      */
-    public function updateService()
+    public function updateService(Request $request, int $userId, int $visitId, int $serviceId)
     {
-        return new JsonResponse(
-            [
-                'status' => 'OK'
-            ]
-        );
+        $response = new JsonResponse();
+
+        $data = json_decode($request->getContent(), true);
+        if (!isset($data['price']) && !isset($data['title'])) {
+            return $response->setStatusCode(400);
+        }
+
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $found = false;
+        if (!empty($user)) {
+            $visits = $user->getVisits();
+            if (!empty($visits)) {
+                foreach ($visits as $visit) {
+                    if ($visit->getId() == $visitId) {
+                        $service = $visit->getService();
+                        if (!empty($service)) {
+                            if ($service->getId() == $serviceId) {
+                                if(isset($data['title'])) {
+                                    $service->setTitle($data['title']);
+                                }
+                                if (isset($data['price'])) {
+
+                                    if (!is_int($data['price'])) {
+                                        $response->setData(['errorMessage' => 'Bad parameter']);
+                                        $response->setStatusCode(400);
+                                        return $response;
+                                    }
+
+                                    $service->setPrice($data['price']);
+                                }
+                                $found=true;
+                                $this->entityManagerInterface->persist($service);
+                                $this->entityManagerInterface->flush();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($found) {
+            $response->setStatusCode(200);
+        } else {
+            $response->setStatusCode(404);
+        }
+        return $response;
     }
 }
