@@ -73,6 +73,10 @@ class UserController extends AbstractController
             );
         } else {
             $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
         }
 
         return $response;
@@ -88,8 +92,27 @@ class UserController extends AbstractController
     {
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
+        $isAllDataSet = true;
+        $notSetColumns = [];
 
-        if (isset($data['name']) && isset($data['surname']) && isset($data['dateOfBirth']) && isset($data['role'])) {
+        if (!isset($data['name'])) {
+            $notSetColumns += ["name" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+        if (!isset($data['surname'])) {
+            $notSetColumns += ["surname" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+        if (!isset($data['dateOfBirth'])) {
+            $notSetColumns += ["dateOfBirth" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+        if (!isset($data['role'])) {
+            $notSetColumns += ["role" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+
+        if ($isAllDataSet) {
             $user = new User();
             $user->setName($data['name']);
             $user->setSurname($data['surname']);
@@ -98,9 +121,19 @@ class UserController extends AbstractController
             $this->entityManagerInterface->persist($user);
             $this->entityManagerInterface->flush();
             $response->setStatusCode(201);
+            $response->setData(
+                [
+                    'id' => $user->getId(),
+                    'name' => $user->getName(),
+                    'surname' => $user->getSurname(),
+                    'dateOfBirth' => $user->getDateOfBirth(),
+                    'role' => $user->getRole(),
+                ]);
         } else {
             $response->setStatusCode(400);
+            $response->setData($notSetColumns);
         }
+
         return $response;
     }
 
@@ -117,8 +150,12 @@ class UserController extends AbstractController
         if (!empty($user)) {
             $this->entityManagerInterface->remove($user);
             $this->entityManagerInterface->flush();
-            $response->setStatusCode(200);
+            $response->setStatusCode(204);
         } else {
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
             $response->setStatusCode(404);
         }
         return $response;
@@ -137,9 +174,22 @@ class UserController extends AbstractController
         $data = json_decode($request->getContent(), true);
         $user = $this->userRepository->findOneBy(['id' => $userId]);
 
+        if (empty($user)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
+        }
+
         if (isset($data['name']) || isset($data['surname']) || isset($data['dateOfBirth']) || isset($data['role'])) {
             $response->setStatusCode(200);
-        }else{
+        } else {
+            $response->setData(
+                [
+                    "message" => "No data"
+                ]);
             $response->setStatusCode(400);
 
             return $response;
@@ -161,6 +211,14 @@ class UserController extends AbstractController
         $this->entityManagerInterface->persist($user);
         $this->entityManagerInterface->flush();
         $response->setStatusCode(200);
+        $response->setData(
+            [
+                'id' => $user->getId(),
+                'name' => $user->getName(),
+                'surname' => $user->getSurname(),
+                'dateOfBirth' => $user->getDateOfBirth(),
+                'role' => $user->getRole(),
+            ]);
 
         return $response;
     }

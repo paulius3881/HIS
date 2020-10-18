@@ -50,6 +50,7 @@ class VisitController extends AbstractController
      */
     public function getVisitsList(int $userId)
     {
+        //returnint tuscia masyva
         $response = new JsonResponse();
         $user = $this->userRepository->findOneBy(['id' => $userId]);
         $visits = [];
@@ -58,6 +59,7 @@ class VisitController extends AbstractController
         } else {
             $response->setStatusCode(404);
         }
+
         $data = [];
         foreach ($visits as $visit) {
 
@@ -65,13 +67,15 @@ class VisitController extends AbstractController
                 [
                     'id' => $visit->getId(),
                     'time' => $visit->getTime(),
-                    'serviceId' => $visit->getService()->getId(),
-                    'workerId' => $visit->getWorker()->getId(),
-                    'clientId' => $visit->getClient()->getId(),
+                    'serviceId' => 0,//$visit->getService()->getId(),
+                    'workerId' => 0,//$visit->getWorker()->getId(),
+                    'clientId' => 0,//$visit->getClient()->getId(),
                 ];
         }
+
         if (empty($data)) {
-            $response->setStatusCode(404);
+            $response->setStatusCode(200);
+            $response->setData();
         }
 
         return $response->setData($data);
