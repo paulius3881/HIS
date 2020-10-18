@@ -12,6 +12,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Encoder\UserPasswordEncoderInterface;
 
 /**
  * @Route("/api")
@@ -65,6 +66,7 @@ class UserController extends AbstractController
             $response->setData(
                 [
                     'id' => $user->getId(),
+                    'email'=>$user->getEmail(),
                     'name' => $user->getName(),
                     'surname' => $user->getSurname(),
                     'dateOfBirth' => $user->getDateOfBirth(),
@@ -86,9 +88,10 @@ class UserController extends AbstractController
      * @Route("/users", name="add-user", methods={"POST"})
      *
      * @param Request $request
+     * @param UserPasswordEncoderInterface $encoder
      * @return JsonResponse
      */
-    public function addUser(Request $request)
+    public function addUser(Request $request,UserPasswordEncoderInterface $encoder)
     {
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
@@ -107,23 +110,47 @@ class UserController extends AbstractController
             $notSetColumns += ["dateOfBirth" => 'Column not set'];
             $isAllDataSet = false;
         }
-        if (!isset($data['role'])) {
-            $notSetColumns += ["role" => 'Column not set'];
+        if (!isset($data['email'])) {
+            $notSetColumns += ["email" => 'Column not set'];
             $isAllDataSet = false;
+        }else{
+            if(empty($data['email'])){
+                $notSetColumns += ["email" => 'Email can not be empty'];
+                $isAllDataSet = false;
+            }else{
+                $user=$this->userRepository->findOneBy(['email'=>$data['email']]);
+                if(!empty($user)){
+                    $response->setStatusCode(400);
+                    $response->setData(["message"=>"User with email: ". $data['email']." already exist"]);
+                    return $response;
+                }
+            }
+        }
+        if (!isset($data['password'])) {
+            $notSetColumns += ["password" => 'Column not set'];
+            $isAllDataSet = false;
+        }else{
+            if(empty($data['password'])){
+                $notSetColumns += ["password" => 'Password can not be empty'];
+                $isAllDataSet = false;
+            }
         }
 
         if ($isAllDataSet) {
-            $user = new User();
+            $user = new User($data['email']);
+            $user->setPassword($encoder->encodePassword($user, $data['password']));
+            $user->setEmail($data['email']);
             $user->setName($data['name']);
             $user->setSurname($data['surname']);
             $user->setDateOfBirth($data['dateOfBirth']);
-            $user->setRole($data['role']);
+            $user->setRole("CLIENT");
             $this->entityManagerInterface->persist($user);
             $this->entityManagerInterface->flush();
             $response->setStatusCode(201);
             $response->setData(
                 [
                     'id' => $user->getId(),
+                    'email'=>$user->getEmail(),
                     'name' => $user->getName(),
                     'surname' => $user->getSurname(),
                     'dateOfBirth' => $user->getDateOfBirth(),
@@ -166,13 +193,16 @@ class UserController extends AbstractController
      *
      * @param Request $request
      * @param int $userId
+     * @param UserPasswordEncoderInterface $encoder
      * @return JsonResponse
      */
-    public function updateUser(Request $request, int $userId)
+    public function updateUser(Request $request, int $userId,UserPasswordEncoderInterface $encoder)
     {
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
         $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $notSetColumns = [];
+        $isAllDataSet = true;
 
         if (empty($user)) {
             $response->setStatusCode(404);
@@ -183,7 +213,7 @@ class UserController extends AbstractController
             return $response;
         }
 
-        if (isset($data['name']) || isset($data['surname']) || isset($data['dateOfBirth']) || isset($data['role'])) {
+        if (isset($data['name']) || isset($data['surname']) || isset($data['dateOfBirth'])) {
             $response->setStatusCode(200);
         } else {
             $response->setData(
@@ -204,9 +234,31 @@ class UserController extends AbstractController
         if (isset($data['dateOfBirth'])) {
             $user->setDateOfBirth($data['dateOfBirth']);
         }
-        if (isset($data['role'])) {
-            $user->setRole($data['role']);
+        if (isset($data['oldPassword'])) {
+            if($encoder->isPasswordValid($user, $data['oldPassword'])){
+                if (!isset($data['newPassword'])) {
+                    $notSetColumns += ["newPassword" => 'Column not set'];
+                    $isAllDataSet = false;
+                }else{
+                    if(empty($data['newPassword'])){
+                        $notSetColumns += ["newPassword" => 'New password can not be empty'];
+                        $isAllDataSet = false;
+                    }
+                }
+            }else{
+                $notSetColumns += ["newPassword" => 'Password not match with old'];
+                $isAllDataSet = false;
+            }
         }
+
+        if (!$isAllDataSet) {
+            $response->setData($notSetColumns);
+            $response->setStatusCode(400);
+
+            return $response;
+        }
+
+        $user->setPassword($encoder->encodePassword($user, $data['newPassword']));
 
         $this->entityManagerInterface->persist($user);
         $this->entityManagerInterface->flush();
@@ -214,6 +266,7 @@ class UserController extends AbstractController
         $response->setData(
             [
                 'id' => $user->getId(),
+                'email'=>$user->getEmail(),
                 'name' => $user->getName(),
                 'surname' => $user->getSurname(),
                 'dateOfBirth' => $user->getDateOfBirth(),

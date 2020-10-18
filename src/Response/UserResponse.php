@@ -24,6 +24,7 @@ class UserResponse extends JsonResponse
             $data[] =
                 [
                     'id' => $user->getId(),
+                    'email'=>$user->getEmail(),
                     'name' => $user->getName(),
                     'surname' =>$user->getSurname(),
                     'dateOfBirth' =>$user->getDateOfBirth(),

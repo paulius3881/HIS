@@ -5,12 +5,14 @@
         "php": ">=7.2.5",
         "ext-ctype": "*",
         "ext-iconv": "*",
+        "ext-json": "*",
         "composer/package-versions-deprecated": "^1.11",
         "doctrine/doctrine-bundle": "^2.1",
         "doctrine/doctrine-migrations-bundle": "^3.0",
         "doctrine/orm": "^2.7",
         "friendsofsymfony/rest-bundle": "^3.0",
         "jms/serializer-bundle": "^3.7",
+        "lexik/jwt-authentication-bundle": "^2.8",
         "nelmio/api-doc-bundle": "^3.0",
         "sensio/framework-extra-bundle": "^5.6",
         "symfony/asset": "5.1.*",
@@ -25,8 +27,7 @@
         "symfony/validator": "5.1.*",
         "symfony/yaml": "5.1.*",
         "twig/extra-bundle": "^2.12|^3.0",
-        "twig/twig": "^2.12|^3.0",
-        "ext-json": "*"
+        "twig/twig": "^2.12|^3.0"
     },
     "require-dev": {
         "symfony/maker-bundle": "^1.21"

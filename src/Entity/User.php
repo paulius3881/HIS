@@ -6,18 +6,13 @@ use App\Repository\UserRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * @ORM\Entity(repositoryClass=UserRepository::class)
  */
-class User
+class User implements UserInterface
 {
-
-    public function __construct()
-    {
-        $this->visits = new ArrayCollection();
-    }
-
     /**
      * @ORM\Id()
      * @ORM\GeneratedValue()
@@ -49,6 +44,83 @@ class User
      * @ORM\OneToMany(targetEntity="Visit", mappedBy="client", cascade={"persist"})
      */
     private $visits;
+
+    /**
+     * @ORM\Column(type="string", length=255)
+     */
+    private $password;
+
+    /**
+     * @ORM\Column(type="string", length=255, unique=true)
+     */
+    private $email;
+
+    /**
+     * User constructor.
+     * @param $email
+     */
+    public function __construct($email)
+    {
+        $this->email = $email;
+        $this->visits = new ArrayCollection();
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getSalt()
+    {
+        return null;
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getPassword()
+    {
+        return $this->password;
+    }
+
+    /**
+     * @param $password
+     */
+    public function setPassword($password)
+    {
+        $this->password = $password;
+    }
+    /**
+     * @return mixed
+     */
+    public function getEmail()
+    {
+        return $this->email;
+    }
+
+    /**
+     * @param mixed $email
+     */
+    public function setEmail($email): void
+    {
+        $this->email = $email;
+    }
+
+    public function eraseCredentials()
+    {
+    }
+
+    /**
+     * @return string
+     */
+    public function getUsername()
+    {
+        return $this->email;
+    }
+
+
+    public function getRoles()
+    {
+        return [];
+    }
 
     /**
      * @return int|null
