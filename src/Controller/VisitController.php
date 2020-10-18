@@ -50,7 +50,6 @@ class VisitController extends AbstractController
      */
     public function getVisitsList(int $userId)
     {
-        //returnint tuscia masyva
         $response = new JsonResponse();
         $user = $this->userRepository->findOneBy(['id' => $userId]);
         $visits = [];
@@ -58,6 +57,11 @@ class VisitController extends AbstractController
             $visits = $user->getVisits();
         } else {
             $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
         }
 
         $data = [];
@@ -67,9 +71,9 @@ class VisitController extends AbstractController
                 [
                     'id' => $visit->getId(),
                     'time' => $visit->getTime(),
-                    'serviceId' => 0,//$visit->getService()->getId(),
-                    'workerId' => 0,//$visit->getWorker()->getId(),
-                    'clientId' => 0,//$visit->getClient()->getId(),
+                    'serviceId' => empty($visit->getService()) ? null : $visit->getService()->getId(),
+                    'workerId' => empty($visit->getWorker()) ? null : $visit->getWorker()->getId(),
+                    'clientId' => empty($visit->getClient()) ? null : $visit->getClient()->getId(),
                 ];
         }
 
@@ -90,24 +94,43 @@ class VisitController extends AbstractController
      */
     public function getOneVisit(int $visitId, int $userId)
     {
-        $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
         $response = new JsonResponse();
-        if (!empty($visit)) {
+        $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+
+        if (empty($user)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
+        }
+        if (empty($visit)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                ]);
+            return $response;
+        } else {
             if ($visit->getClient()->getId() == $userId) {
                 $response->setData(
                     [
                         'id' => $visit->getId(),
                         'time' => $visit->getTime(),
-                        'serviceId' => $visit->getService()->getId(),
-                        'workerId' => $visit->getWorker()->getId(),
-                        'clientId' => $visit->getClient()->getId(),
+                        'serviceId' => empty($visit->getService()) ? null : $visit->getService()->getId(),
+                        'workerId' => empty($visit->getWorker()) ? null : $visit->getWorker()->getId(),
+                        'clientId' => empty($visit->getClient()) ? null : $visit->getClient()->getId(),
                     ]
                 );
             } else {
                 $response->setStatusCode(404);
+                $response->setData(
+                    [
+                        "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                    ]);
             }
-        } else {
-            $response->setStatusCode(404);
         }
         return $response;
     }
@@ -123,38 +146,81 @@ class VisitController extends AbstractController
     {
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
-
         $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $isAllDataSet = true;
+        $notSetColumns = [];
+        $worker = null;
+        $service = null;
 
-        if (empty($data['workerId']) || empty($data['time'])) {
-            return $response->setStatusCode(400);
+        if (empty($user)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
         }
 
-        if (!is_int($data['workerId'])) {
-            return $response->setStatusCode(400);
+        if (!isset($data['workerId'])) {
+            $notSetColumns += ["workerId" => 'Column not set'];
+            $isAllDataSet = false;
+        } else {
+            if (!is_int($data['workerId'])) {
+                $notSetColumns += ["workerId" => 'Must be int'];
+                $isAllDataSet = false;
+            } else {
+                $worker = $this->userRepository->findOneBy(['id' => $data['workerId']]);
+                if (empty($worker)) {
+                    $isAllDataSet = false;
+                    $notSetColumns += ["workerId" => 'Worker with id: ' . $data['workerId'] . ' not found'];
+                }
+            }
+        }
+        if (!isset($data['serviceId'])) {
+            $notSetColumns += ["serviceId" => 'Column not set'];
+            $isAllDataSet = false;
+        } else {
+            if (!is_int($data['serviceId'])) {
+                $notSetColumns += ["serviceId" => 'Must be int'];
+                $isAllDataSet = false;
+            } else {
+                $service = $this->serviceRepository->findOneBy(['id' => $data['serviceId']]);
+                if (empty($service)) {
+                    $isAllDataSet = false;
+                    $notSetColumns += ["serviceId" => 'Service with id: ' . $data['serviceId'] . ' not found'];
+                }
+            }
         }
 
-        $worker = $this->userRepository->findOneBy(['id' => $data['workerId']]);
-        if (empty($worker)) {
-            return $response->setStatusCode(400);
+        if (!isset($data['time'])) {
+            $notSetColumns += ["time" => 'Column not set'];
+            $isAllDataSet = false;
         }
 
-        if (!empty($user)) {
+        if (!$isAllDataSet) {
+            $response->setStatusCode(400);
+            $response->setData($notSetColumns);
+            return $response;
+        } else {
+
             $visit = new Visit();
             $visit->setClient($user);
             $visit->setWorker($worker);
             $visit->setTime($data['time']);
-            if (isset($data['serviceId'])) {
-                $visit->setService($this->serviceRepository->findOneBy(['id' => $data['serviceId']]));
-            }
-
+            $visit->setService($service);
             $this->entityManagerInterface->persist($visit);
             $this->entityManagerInterface->flush();
             $response->setStatusCode(200);
-        } else {
-            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    'id' => $visit->getId(),
+                    'time' => $visit->getTime(),
+                    'serviceId' => empty($visit->getService()) ? null : $visit->getService()->getId(),
+                    'workerId' => empty($visit->getWorker()) ? null : $visit->getWorker()->getId(),
+                    'clientId' => empty($visit->getClient()) ? null : $visit->getClient()->getId(),
+                ]
+            );
         }
-
         return $response;
     }
 
@@ -169,20 +235,38 @@ class VisitController extends AbstractController
     {
         $response = new JsonResponse();
         $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
-        $found = false;
-        if (!empty($visit)) {
-            $client = $visit->getClient();
-            if ($client->getId() == $userId) {
-                $this->entityManagerInterface->remove($visit);
-                $this->entityManagerInterface->flush();
-                $found = true;
-            }
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+
+        if (empty($user)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
         }
-        if ($found) {
-            $response->setStatusCode(200);
+        if (empty($visit)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                ]);
+            return $response;
+        }
+
+        $client = $visit->getClient();
+        if ($client->getId() == $userId) {
+            $this->entityManagerInterface->remove($visit);
+            $this->entityManagerInterface->flush();
+            $response->setStatusCode(204);
         } else {
             $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                ]);
         }
+
         return $response;
     }
 
@@ -194,45 +278,107 @@ class VisitController extends AbstractController
      * @param int $userId
      * @return JsonResponse
      */
-    public function updateVisit(Request $request,int $visitId, int $userId)
+    public function updateVisit(Request $request, int $visitId, int $userId)
     {
         $response = new JsonResponse();
+        $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
+        $user = $this->userRepository->findOneBy(['id' => $userId]);
+        $data = json_decode($request->getContent(), true);
+        $notSetColumns = [];
+        $isAllDataSet = true;
+        $worker = null;
+        $service = null;
 
-        if (!isset($data['workerId']) && !isset($data['serviceId']) &&!isset($data['time'])) {
-            return $response->setStatusCode(400);
+        if (empty($user)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " not found"
+                ]);
+            return $response;
+        }
+        if (empty($visit)) {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                ]);
+            return $response;
+        }
+        if (!isset($data['workerId']) && !isset($data['serviceId']) && !isset($data['time'])) {
+            $response->setData(
+                [
+                    "message" => "No data"
+                ]);
+            $response->setStatusCode(400);
+            return $response;
         }
 
-        $visit = $this->visitRepository->findOneBy(['id' => $visitId]);
-        $found = false;
-        if (!empty($visit)) {
-            $client = $visit->getClient();
-            if ($client->getId() == $userId) {
 
-                $data = json_decode($request->getContent(), true);
+        if ($visit->getClient()->getId() == $userId) {
 
-                if(!empty($data['workerId'])){
+            if (isset($data['workerId'])) {
+                if (is_int($data['workerId'])) {
                     $worker = $this->userRepository->findOneBy(['id' => $data['workerId']]);
                     if (empty($worker)) {
-                        return $response->setStatusCode(400);
+                        $notSetColumns += ["workerId" => 'Worker with id: ' . $data['workerId'] . ' not found'];
+                        $isAllDataSet = false;
                     }
+                } else {
+                    $notSetColumns += ["workerId" => 'Must be int'];
+                    $isAllDataSet = false;
+                }
+            }
+            if (isset($data['serviceId'])) {
+                if (is_int($data['serviceId'])) {
+                    $service = $this->serviceRepository->findOneBy(['id' => $data['serviceId']]);
+                    if (empty($service)) {
+                        $notSetColumns += ["serviceId" => 'Service with id: ' . $data['serviceId'] . ' not found'];
+                        $isAllDataSet = false;
+                    }
+                } else {
+                    $notSetColumns += ["serviceId" => 'Must be int'];
+                    $isAllDataSet = false;
+                }
+            }
+
+            if ($isAllDataSet) {
+                if (!empty($worker)) {
                     $visit->setWorker($worker);
                 }
-
-                if (isset($data['serviceId'])) {
-                    $visit->setService($this->serviceRepository->findOneBy(['id' => $data['serviceId']]));
+                if (!empty($service)) {
+                    $visit->setService($service);
                 }
                 if (isset($data['time'])) {
                     $visit->setTime($data['time']);
                 }
+
                 $this->entityManagerInterface->persist($visit);
                 $this->entityManagerInterface->flush();
-                $found = true;
+
+                $response->setStatusCode(200);
+                $response->setData(
+                    [
+                        'id' => $visit->getId(),
+                        'time' => $visit->getTime(),
+                        'serviceId' => empty($visit->getService()) ? null : $visit->getService()->getId(),
+                        'workerId' => empty($visit->getWorker()) ? null : $visit->getWorker()->getId(),
+                        'clientId' => empty($visit->getClient()) ? null : $visit->getClient()->getId(),
+                    ]
+                );
+
+
+            } else {
+                $response->setStatusCode(400);
+                $response->setData($notSetColumns);
             }
-        }
-        if ($found) {
-            $response->setStatusCode(200);
+
         } else {
             $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "User with id: " . $userId . " do not have visit with id: " . $visitId
+                ]);
         }
         return $response;
     }
