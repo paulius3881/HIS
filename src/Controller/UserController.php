@@ -49,7 +49,18 @@ class UserController extends AbstractController
      */
     public function getUsersList()
     {
+        $user = $this->getUser();
+        if ($user->getRole() != "ADMIN") {
+            $response = new JsonResponse();
+            $response->setStatusCode(403);
+            $response->setData(
+                [
+                    "message" => "Access denied. For user with role " . $user->getRole()
+                ]);
+            return $response;
+        }
         return new UserResponse($this->userRepository->findAll());
+
     }
 
     /**
@@ -60,6 +71,17 @@ class UserController extends AbstractController
      */
     public function getOneUser(int $userId)
     {
+        $user = $this->getUser();
+        if ($user->getRole() != "ADMIN") {
+            $response = new JsonResponse();
+            $response->setStatusCode(403);
+            $response->setData(
+                [
+                    "message" => "Access denied. For user with role " . $user->getRole()
+                ]);
+            return $response;
+        }
+
         $response = new JsonResponse();
         $user = $this->userRepository->findOneBy(['id' => $userId]);
         if (!empty($user)) {
@@ -93,6 +115,17 @@ class UserController extends AbstractController
      */
     public function addUser(Request $request,UserPasswordEncoderInterface $encoder)
     {
+        $user = $this->getUser();
+        if ($user->getRole() != "ADMIN") {
+            $response = new JsonResponse();
+            $response->setStatusCode(403);
+            $response->setData(
+                [
+                    "message" => "Access denied. For user with role " . $user->getRole()
+                ]);
+            return $response;
+        }
+
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
         $isAllDataSet = true;
@@ -172,6 +205,17 @@ class UserController extends AbstractController
      */
     public function deleteUser(int $userId)
     {
+        $user = $this->getUser();
+        if ($user->getRole() != "ADMIN") {
+            $response = new JsonResponse();
+            $response->setStatusCode(403);
+            $response->setData(
+                [
+                    "message" => "Access denied. For user with role " . $user->getRole()
+                ]);
+            return $response;
+        }
+
         $response = new JsonResponse();
         $user = $this->userRepository->findOneBy(['id' => $userId]);
         if (!empty($user)) {
@@ -198,6 +242,17 @@ class UserController extends AbstractController
      */
     public function updateUser(Request $request, int $userId,UserPasswordEncoderInterface $encoder)
     {
+        $user = $this->getUser();
+        if ($user->getRole() != "ADMIN") {
+            $response = new JsonResponse();
+            $response->setStatusCode(403);
+            $response->setData(
+                [
+                    "message" => "Access denied. For user with role " . $user->getRole()
+                ]);
+            return $response;
+        }
+
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
         $user = $this->userRepository->findOneBy(['id' => $userId]);
