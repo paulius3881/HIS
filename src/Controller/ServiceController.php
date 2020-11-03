@@ -383,4 +383,25 @@ class ServiceController extends AbstractController
         }
         return $response;
     }
+
+    /**
+     * @Route("/services", name="get-services-list", methods={"GET"})
+     */
+    public function getAllServicesList()
+    {
+        $data = [];
+        foreach ($this->serviceRepository->findAll() as $service) {
+            $data[] =
+                [
+                    'id' => $service->getId(),
+                    'title' => $service->getTitle(),
+                    'price' => $service->getPrice(),
+                ];
+        }
+
+        $response = new JsonResponse();
+        $response->setStatusCode(200);
+        $response->setData($data);
+        return $response;
+    }
 }

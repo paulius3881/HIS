@@ -50,7 +50,7 @@ class UserController extends AbstractController
     public function getUsersList()
     {
         $user = $this->getUser();
-        if ($user->getRole() != "ADMIN") {
+        if ($user->getRole() == "USER") {
             $response = new JsonResponse();
             $response->setStatusCode(403);
             $response->setData(
@@ -58,9 +58,26 @@ class UserController extends AbstractController
                     "message" => "Access denied. For user with role " . $user->getRole()
                 ]);
             return $response;
+        } else if ($user->getRole() == "CUSTOMER") {
+            $data = [];
+            foreach ($this->userRepository->findBy(['role' => 'USER']) as $user) {
+                $data[] =
+                    [
+                        'id' => $user->getId(),
+                        'email' => $user->getEmail(),
+                        'name' => $user->getName(),
+                        'surname' => $user->getSurname(),
+                        'dateOfBirth' => $user->getDateOfBirth(),
+                        'role' => $user->getRole(),
+                    ];
+            }
+            $response = new JsonResponse();
+            $response->setStatusCode(200);
+            $response->setData($data);
+            return $response;
+        } else {
+            return new UserResponse($this->userRepository->findAll());
         }
-        return new UserResponse($this->userRepository->findAll());
-
     }
 
     /**

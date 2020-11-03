@@ -1,1 +1,494 @@
 {% extends 'base.html.twig' %}
+
+{% block title %}Kirpykla{% endblock %}
+{% block body %}
+    <head>
+        <!--====== Required meta tags ======-->
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+        <!--====== Title ======-->
+        <title>Smart - Multi-purpose Landing Page Template</title>
+        <!--====== Favicon Icon ======-->
+        <link rel="shortcut icon" href="assets/images/favicon.png" type="image/png">
+        <!--====== Bootstrap css ======-->
+        <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+        <!--====== Line Icons css ======-->
+        <link rel="stylesheet" href="assets/css/LineIcons.css">
+        <!--====== Magnific Popup css ======-->
+        <link rel="stylesheet" href="assets/css/magnific-popup.css">
+        <!--====== Slick css ======-->
+        <link rel="stylesheet" href="assets/css/slick.css">
+        <!--====== Animate css ======-->
+        <link rel="stylesheet" href="assets/css/animate.css">
+        <!--====== Default css ======-->
+        <link rel="stylesheet" href="assets/css/default.css">
+        <!--====== Style css ======-->
+        <link rel="stylesheet" href="assets/css/style.css">
+    </head>
+    <script>
+        var token = sessionStorage.getItem("token");
+
+
+        $(document).ready(function () {
+
+            if (token == null) {
+                console.log("neprisijunges");
+            } else {
+                console.log('OK');
+                $('#loginButton').attr("style", "display:none");
+                getServices();
+                getUsers();
+                getVisits()
+            }
+        });
+
+        function getVisits() {
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('get-visits-list') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+
+            var clients = "";
+            clients += "<div class=\"row justify-content-center\">\n" +
+                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Laikas</b></p></div>\n" +
+                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Paslauga</b></p></div>\n" +
+                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Kaina</b></p></div>\n" +
+                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Darbuotojas</b></p></div>\n" +
+                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Klientas</b></p></div>\n" +
+                "            </div>";
+
+            ajaxSendRequest.done(function (data) {
+                console.log(data);
+
+                for (x in data) {
+
+                    console.log(data[x].id);
+                    clients += "<div class=\"row justify-content-center\">\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].time + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].serviceTitle + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].servicePrice + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].workerName + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].clientName + "</p></div>\n" +
+                        "            </div>";
+                }
+                $('.visits-information').html(clients);
+
+            }).fail(function (textStatus, errorThrown) {
+            });
+        }
+
+        function getUsers() {
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('get-users-list') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                console.log(data);
+                var clients = "";
+                for (x in data) {
+                    console.log(data[x].id);
+                    clients += "<div class=\"row justify-content-center\">\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].name + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].surname + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].dateOfBirth + "</p></div>\n" +
+                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].email + "</p></div>\n" +
+                        "            </div>";
+                }
+                $('.clients-information').html(clients);
+
+            }).fail(function (textStatus, errorThrown) {
+            });
+        }
+
+        function getServices() {
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('get-services-list') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer '+token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                console.log(data);
+                var services = "";
+                for (x in data){
+                    console.log(data[x].id);
+
+                    services += "<div class=\"col-lg-4 col-md-7 col-sm-9\">\n" +
+                        "                    <div class=\"pricing-style-one mt-40 wow fadeIn\" data-wow-duration=\"1.5s\" data-wow-delay=\"0.2s\">\n" +
+                        "                        <div class=\"pricing-icon text-center\">\n" +
+                        "                            <img src=\"assets/images/wman.svg\" alt=\"\">\n" +
+                        "                        </div>\n" +
+                        "                        <div class=\"pricing-header text-center\">\n" +
+                        "                            <h5 class=\"sub-title\">"+data[x].title+"</h5>\n" +
+                        "                            <p class=\"month\"><span class=\"price\">"+data[x].price+"€ </span></p>\n" +
+                        "                        </div>\n" +
+                        "                    </div>" +
+                        "                </div>";
+                }
+                $('#services-list').html(services);
+
+            }).fail(function (textStatus, errorThrown) {
+            });
+        }
+
+        function login() {
+
+            if ($('#email').val() == "" || $('#password').val() == "") {
+                $('.bad-login').removeAttr("style");
+                $('.bad-login').attr("style", "color:red");
+                return;
+            }
+            var info = {
+                "email": $('#email').val(),
+                "password": $('#password').val(),
+            }
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('api_login_check') }}',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                type: 'POST',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                console.log(data['user']);
+                sessionStorage.setItem("token", data['token']);
+                sessionStorage.setItem("user", data['user']);
+
+                $('#modalLoginForm').modal('hide');
+                $(".modal-backdrop").remove();
+                $('#loginButton').attr("style", "display:none");
+                getServices();
+                getUsers();
+                getVisits();
+
+            }).fail(function (textStatus, errorThrown) {
+                $('.bad-login').removeAttr("style");
+                $('.bad-login').attr("style", "color:red");
+            });
+        }
+    </script>
+
+
+    <body>
+
+    <div class="modal fade" id="modalLoginForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Prisijungti</h4>
+                    <button type="button" id="login-modal-close" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-1">
+                        <input type="email" id="email" required class="form-control validate">
+                        <label data-error="wrong" data-success="right" for="defaultForm-email">El. paštas</label>
+                    </div>
+                    <div class="md-form mb-4">
+                        <input type="password" id="password" required class="form-control validate">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Slaptažodis</label>
+                    </div>
+                    <div class="bad-login" style="display: none; color: red">
+                        Blogi prisijungimo duomenys!!!
+                    </div>
+
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-default" onclick="login()">Prisijungti</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--====== PRELOADER PART START ======-->
+
+    <div class="preloader">
+        <div class="loader">
+            <div class="ytp-spinner">
+                <div class="ytp-spinner-container"
+                     style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!--====== PRELOADER PART ENDS ======-->
+
+    <!--====== NAVBAR PART START ======-->
+
+    <section class="header-area">
+        <div class="navbar-area" style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <nav class="navbar navbar-expand-lg">
+                            <a class="navbar-brand" href="#">
+                                <img src="assets/images/logo.png" alt="Logo">
+                            </a>
+
+                            <button class="navbar-toggler" type="button" data-toggle="collapse"
+                                    data-target="#navbarEight" aria-controls="navbarEight" aria-expanded="false"
+                                    aria-label="Toggle navigation">
+                                <span class="toggler-icon"></span>
+                                <span class="toggler-icon"></span>
+                                <span class="toggler-icon"></span>
+                            </button>
+
+                            <div class="collapse navbar-collapse sub-menu-bar" id="navbarEight">
+                                <ul class="navbar-nav ml-auto">
+                                    <li class="nav-item active">
+                                        <a class="page-scroll" href="#home">Pagrindinis</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="page-scroll" href="#about">Klientai</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="page-scroll" href="#portfolio">Vizitai</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="page-scroll" href="#pricing">Paslaugos</a>
+                                    </li>
+                                    <li class="nav-item" id="loginButton">
+                                        <a href="" data-toggle="modal" data-target="#modalLoginForm">Prisijungti</a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </nav> <!-- navbar -->
+                    </div>
+                </div> <!-- row -->
+            </div> <!-- container -->
+        </div> <!-- navbar area -->
+
+        <div id="home" class="slider-area">
+            <div class="bd-example">
+                <div id="carouselOne" class="carousel slide" data-ride="carousel">
+                    <ol class="carousel-indicators">
+                        <li data-target="#carouselOne" data-slide-to="0" class="active"></li>
+                        <li data-target="#carouselOne" data-slide-to="1"></li>
+                        <li data-target="#carouselOne" data-slide-to="2"></li>
+                    </ol>
+
+                    <div class="carousel-inner">
+                        <div class="carousel-item bg_cover active"
+                             style="background-image: url(assets/images/slider-1.jpg)">
+                            <div class="carousel-caption">
+                                <div class="container">
+                                    <div class="row justify-content-center">
+                                        <div class="col-xl-6 col-lg-7 col-sm-10">
+                                            <h2 class="carousel-title">Vyriški ir moteriški kirpimai</h2>
+                                            <ul class="carousel-btn rounded-buttons">
+                                                <li><a class="main-btn rounded-three"
+                                                       style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
+                                                       href="#">Registruotis</a></li>
+                                            </ul>
+                                        </div>
+                                    </div> <!-- row -->
+                                </div> <!-- container -->
+                            </div> <!-- carousel caption -->
+                        </div> <!-- carousel-item -->
+
+                        <div class="carousel-item bg_cover" style="background-image: url(assets/images/slider-2.jpg)">
+                            <div class="carousel-caption">
+                                <div class="container">
+                                    <div class="row justify-content-center">
+                                        <div class="col-xl-6 col-lg-7 col-sm-10">
+                                            <h2 class="carousel-title">Plaukų dažymas</h2>
+                                            <ul class="carousel-btn rounded-buttons">
+                                                <li><a class="main-btn rounded-three"
+                                                       style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
+                                                       href="#">Registruotis</a></li>
+                                            </ul>
+                                        </div>
+                                    </div> <!-- row -->
+                                </div> <!-- container -->
+                            </div> <!-- carousel caption -->
+                        </div> <!-- carousel-item -->
+
+                        <div class="carousel-item bg_cover" style="background-image: url(assets/images/slider-3.jpg)">
+                            <div class="carousel-caption">
+                                <div class="container">
+                                    <div class="row justify-content-center">
+                                        <div class="col-xl-6 col-lg-7 col-sm-10">
+                                            <h2 class="carousel-title">Barzdos tvarkymas</h2>
+                                            <ul class="carousel-btn rounded-buttons">
+                                                <li><a class="main-btn rounded-three"
+                                                       style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
+                                                       href="#">Registruotis</a></li>
+                                            </ul>
+                                        </div>
+                                    </div> <!-- row -->
+                                </div> <!-- container -->
+                            </div> <!-- carousel caption -->
+                        </div> <!-- carousel-item -->
+                    </div> <!-- carousel-inner -->
+
+                    <a class="carousel-control-prev" href="#carouselOne" role="button" data-slide="prev">
+                        <i class="lni-arrow-left-circle"></i>
+                    </a>
+
+                    <a class="carousel-control-next" href="#carouselOne" role="button" data-slide="next">
+                        <i class="lni-arrow-right-circle"></i>
+                    </a>
+                </div> <!-- carousel -->
+            </div> <!-- bd-example -->
+        </div>
+
+    </section>
+
+    <!--====== NAVBAR PART ENDS ======-->
+
+    <!--====== SAIDEBAR PART START ======-->
+
+    <div class="sidebar-right">
+        <div class="sidebar-close">
+            <a class="close" href="#close"><i class="lni-close"></i></a>
+        </div>
+        <div class="sidebar-content">
+            <div class="sidebar-logo text-center">
+                <a href="#"><img src="assets/images/logo-alt.png" alt="Logo"></a>
+            </div> <!-- logo -->
+            <div class="sidebar-menu">
+                <ul>
+                    <li><a href="#">ABOUT</a></li>
+                    <li><a href="#">SERVICES</a></li>
+                    <li><a href="#">RESOURCES</a></li>
+                    <li><a href="#">CONTACT</a></li>
+                </ul>
+            </div> <!-- menu -->
+            <div class="sidebar-social d-flex align-items-center justify-content-center">
+                <span>FOLLOW US</span>
+                <ul>
+                    <li><a href="#"><i class="lni-twitter-original"></i></a></li>
+                    <li><a href="#"><i class="lni-facebook-filled"></i></a></li>
+                </ul>
+            </div> <!-- sidebar social -->
+        </div> <!-- content -->
+    </div>
+    <div class="overlay-right"></div>
+
+    <!--====== SAIDEBAR PART ENDS ======-->
+
+    <!--====== ABOUT PART START ======-->
+
+    <section id="about" class="about-area">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xl-6 col-lg-8">
+                    <div class="section-title text-center mt-30 pb-40">
+                        <h4 class="title wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="0.6s">Klientai</h4>
+                        <p class="text wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="1s">Šie klientai yra mūsų kirpyklos turtas</p>
+                    </div> <!-- section title -->
+                </div>
+            </div> <!-- row -->
+            <div class="clients-information">
+
+            </div>
+        </div> <!-- container -->
+    </section>
+
+    <!--====== ABOUT PART ENDS ======-->
+
+    <!--====== portfolio PART START ======-->
+
+    <section id="portfolio" class="portfolio-area">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    <div class="section-title text-center pb-20">
+                        <h3 class="title">Vizitai</h3>
+                        <p class="text">Kiekvienas kliento apsilankymas yra be galo svarbus mūsų kirpėjams, administracijai. Jų šiluma, bendravimas, meilė yra tai dėl ko mes dirbame kartu</p>
+                    </div> <!-- row -->
+                </div>
+            </div> <!-- row -->
+            <div class="visits-information">
+
+            </div>
+
+        </div> <!-- container -->
+    </section>
+
+    <!--====== portfolio PART ENDS ======-->
+
+    <!--====== PRINICNG STYLE EIGHT START ======-->
+
+    <section id="pricing" class="pricing-area">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-6">
+                    <div class="section-title text-center pb-20">
+                        <h3 class="title">Paslaugos</h3>
+                        <p class="text">Pas mus kirpykloje galite rinktis iš šių paslaugų. Viską atliksime profesionaliai ir užtikrintai. Mūsų kirpykloje dirba tik gerai žinomi žmonės.</p>
+                    </div> <!-- section title -->
+                </div>
+            </div> <!-- row -->
+            <div class="row justify-content-center" id="services-list">
+
+
+            </div> <!-- row -->
+        </div> <!-- container -->
+    </section>
+
+    <!--====== PRINICNG STYLE EIGHT ENDS ======-->
+
+    <!--====== BACK TOP TOP PART START ======-->
+
+    <a href="#" class="back-to-top"><i class="lni-chevron-up"></i></a>
+
+    <!--====== jquery js ======-->
+    <script src="assets/js/vendor/modernizr-3.6.0.min.js"></script>
+    <script src="assets/js/vendor/jquery-1.12.4.min.js"></script>
+
+    <!--====== Bootstrap js ======-->
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/popper.min.js"></script>
+
+    <!--====== Slick js ======-->
+    <script src="assets/js/slick.min.js"></script>
+
+    <!--====== Isotope js ======-->
+    <script src="assets/js/isotope.pkgd.min.js"></script>
+
+    <!--====== Images Loaded js ======-->
+    <script src="assets/js/imagesloaded.pkgd.min.js"></script>
+
+    <!--====== Magnific Popup js ======-->
+    <script src="assets/js/jquery.magnific-popup.min.js"></script>
+
+    <!--====== Scrolling js ======-->
+    <script src="assets/js/scrolling-nav.js"></script>
+    <script src="assets/js/jquery.easing.min.js"></script>
+
+    <!--====== wow js ======-->
+    <script src="assets/js/wow.min.js"></script>
+
+    <!--====== Main js ======-->
+    <script src="assets/js/main.js"></script>
+
+    </body>
+
+    </html>
+
+{% endblock %}

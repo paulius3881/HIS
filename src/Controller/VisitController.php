@@ -382,4 +382,27 @@ class VisitController extends AbstractController
         }
         return $response;
     }
+
+    /**
+     * @Route("/visits", name="get-visits-list", methods={"GET"})
+     */
+    public function getAllVisitsList()
+    {
+        $data = [];
+        foreach ($this->visitRepository->findAll() as $visit) {
+            $data[] =
+                [
+                    'id' => $visit->getId(),
+                    'time' => $visit->getTime(),
+                    'serviceTitle' => empty($visit->getService()) ? null : $visit->getService()->getTitle(),
+                    'servicePrice' => empty($visit->getService()) ? null : $visit->getService()->getPrice(),
+                    'workerName' => empty($visit->getWorker()) ? null : $visit->getWorker()->getName(),
+                    'clientName' => empty($visit->getClient()) ? null : $visit->getClient()->getName(),
+                ];
+        }
+        $response = new JsonResponse();
+        $response->setStatusCode(200);
+        $response->setData($data);
+        return $response;
+    }
 }
