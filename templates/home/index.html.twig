@@ -28,23 +28,198 @@
         <link rel="stylesheet" href="assets/css/style.css">
     </head>
     <script>
-        var token = sessionStorage.getItem("token");
-
+        var token = null;
 
         $(document).ready(function () {
-
+            token = sessionStorage.getItem("token");
             if (token == null) {
-                console.log("neprisijunges");
+
+                $('#logout').attr("style", "display:none");
+                $('.visitRegister').attr("style", "display:none");
             } else {
-                console.log('OK');
+
                 $('#loginButton').attr("style", "display:none");
+                $('#register').attr("style", "display:none");
+                $('#logout').removeAttr("style");
+                $('#logout').attr("style", "-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;");
+                getActiveUser();
                 getServices();
                 getUsers();
-                getVisits()
+                getVisits();
+                checkPermissionUsers();
+                fillRegister();
             }
         });
 
+        function fillRegister() {
+
+            var clients = "";
+            var services = "";
+            var ajaxSendRequestUsers = $.ajax({
+                url: '{{ path('get-users-list') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequestUsers.done(function (data) {
+                for (x in data) {
+                    clients += "<option value='" + data[x].id + "'> " + data[x].name + " " + data[x].surname + "</option>";
+                }
+            }).fail(function (textStatus, errorThrown) {
+            });
+            var ajaxSendRequestService = $.ajax({
+                url: '{{ path('get-services-list') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequestService.done(function (data) {
+                for (x in data) {
+                    services += "<option value='" + data[x].id + "'> " + data[x].title + "</option>";
+                }
+            }).fail(function (textStatus, errorThrown) {
+            });
+
+            $('#worker-register').html(clients);
+            $('#service-register').html(services);
+        }
+
+        function checkPermissionUsers() {
+
+            if (sessionStorage.getItem("userRole") == 'CUSTOMER') {
+                $('.role-change-place').attr("style", "display:none");
+            }
+
+            if (sessionStorage.getItem("userRole") == 'CLIENT') {
+                $('.role-change-place').attr("style", "display:none");
+                $('.visitRegister').removeAttr("style");
+            } else {
+                $('.visitRegister').attr("style", "display:none");
+            }
+        }
+
+        function getActiveUser() {
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('get-active-user') }}',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+
+            ajaxSendRequest.done(function (data) {
+
+                sessionStorage.setItem("userId", data.id);
+                sessionStorage.setItem("userRole", data.role);
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+            });
+        }
+
+        function registerVisit() {
+
+            if ($('#worker-register').val() == ""
+                ||
+                $('#service-register').val() == ""
+                ||
+                $('#date-register').val() == ""
+            ) {
+                $('.bad-register-visit').removeAttr("style");
+                $('.bad-register-visit').attr("style", "color:red");
+                return;
+            }
+
+            var info = {
+                "workerId": parseInt($('#worker-register').val()),
+                "serviceId": parseInt($('#service-register').val()),
+                "time": $('#date-register').val(),
+            }
+            var ajaxSendRequest = $.ajax({
+                url: window.location.href + 'api/users/' + sessionStorage.getItem("userId") + '/visits',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'POST',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+
+                $('#modalRegisterVisitForm').modal('hide');
+                $(".modal-backdrop").remove();
+                getVisits();
+                alert('Sėkmingai užsiregistravote pasirinktai paslaugai');
+
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+                $('.bad-register-visit').removeAttr("style");
+                $('.bad-register-visit').attr("style", "color:red");
+            });
+
+        }
+
+        function register() {
+
+            if ($('#email-register').val() == ""
+                ||
+                $('#password-register').val() == ""
+                ||
+                $('#name-register').val() == ""
+                ||
+                $('#surname-register').val() == ""
+                ||
+                $('#dateOfBirth-register').val() == ""
+            ) {
+                $('.bad-register').removeAttr("style");
+                $('.bad-register').attr("style", "color:red");
+                return;
+            }
+            var info = {
+                "email": $('#email-register').val(),
+                "password": $('#password-register').val(),
+                "name": $('#name-register').val(),
+                "surname": $('#surname-register').val(),
+                "dateOfBirth": $('#dateOfBirth-register').val(),
+            }
+            var ajaxSendRequest = $.ajax({
+                url: '{{ path('add-user') }}',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                type: 'POST',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+
+                $('#modalRegisterForm').modal('hide');
+                $(".modal-backdrop").remove();
+                alert('Sveikiname sėkmingai prisiregistravus, dabar prisijunkite.');
+
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+                $('.bad-login').removeAttr("style");
+                $('.bad-login').attr("style", "color:red");
+            });
+
+        }
+
         function getVisits() {
+
             var ajaxSendRequest = $.ajax({
                 url: '{{ path('get-visits-list') }}',
                 headers: {
@@ -57,31 +232,31 @@
             });
 
             var clients = "";
-            clients += "<div class=\"row justify-content-center\">\n" +
-                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Laikas</b></p></div>\n" +
-                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Paslauga</b></p></div>\n" +
-                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Kaina</b></p></div>\n" +
-                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Darbuotojas</b></p></div>\n" +
-                "                <div class=\"col-2\"><p class=\"text wow fadeInUp\"><b>Klientas</b></p></div>\n" +
-                "            </div>";
 
             ajaxSendRequest.done(function (data) {
-                console.log(data);
 
                 for (x in data) {
-
-                    console.log(data[x].id);
+                    if (x == 0) {
+                        clients += "<div class=\"row justify-content-center\">\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Laikas</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Paslauga</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Kaina</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Darbuotojas</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Klientas</b></p><br></div>\n" +
+                            "            </div>";
+                    }
                     clients += "<div class=\"row justify-content-center\">\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].time + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].serviceTitle + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].servicePrice + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].workerName + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].clientName + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].time + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].serviceTitle + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].servicePrice + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].workerName + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].clientName + "</p><br></div>\n" +
                         "            </div>";
                 }
                 $('.visits-information').html(clients);
 
             }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
             });
         }
 
@@ -97,20 +272,38 @@
                 async: false,
             });
             ajaxSendRequest.done(function (data) {
-                console.log(data);
+
                 var clients = "";
                 for (x in data) {
-                    console.log(data[x].id);
+                    if (x == 0) {
+                        clients += "<div class=\"row justify-content-center\">\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Vardas</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Pavardė</b></p></div>\n" +
+                            "                <div class=\"col-md-4\"><p class=\"text wow fadeInUp\"><b>El. paštas</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\"><b>Rolė</b></p></div>\n" +
+                            "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp role-change-place\"><b>Veiksmai</b></p><br></div>\n" +
+                            "            </div>";
+                    }
+                    var role = 'Nepriskirta';
+                    if (data[x].role == "ADMIN") {
+                        role = 'Adminstratorius';
+                    } else if (data[x].role == "CUSTOMER") {
+                        role = 'Darbuotojas';
+                    } else {
+                        role = 'Klientas';
+                    }
                     clients += "<div class=\"row justify-content-center\">\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].name + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].surname + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].dateOfBirth + "</p></div>\n" +
-                        "                <div class=\"col-2\"><p class=\"text wow fadeInUp\">" + data[x].email + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].name + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\">" + data[x].surname + "</p></div>\n" +
+                        "                <div class=\"col-md-4\"><p class=\"text wow fadeInUp\">" + data[x].email + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp\" id=\"role-place-" + data[x].id + "\">" + role + "</p></div>\n" +
+                        "                <div class=\"col-md-2\"><p class=\"text wow fadeInUp role-change-place\" id=\"role-change-" + data[x].id + "\"><a type='button' class='change-role-button' onclick='changeRole(\"" + data[x].role + "\",\"" + data[x].id + "\")'>Pakeisti rolę</a></p><br></div>\n" +
                         "            </div>";
                 }
                 $('.clients-information').html(clients);
 
             }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
             });
         }
 
@@ -119,17 +312,38 @@
                 url: '{{ path('get-services-list') }}',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer '+token
+                    'Authorization': 'Bearer ' + token
                 },
                 type: 'GET',
                 dataType: 'json',
                 async: false,
             });
             ajaxSendRequest.done(function (data) {
-                console.log(data);
+
                 var services = "";
-                for (x in data){
-                    console.log(data[x].id);
+                for (x in data) {
+                    services += "<div class=\"col-lg-4 col-md-7 col-sm-9\">\n" +
+                        "                    <div class=\"pricing-style-one mt-40 wow fadeIn\" data-wow-duration=\"1.5s\" data-wow-delay=\"0.2s\">\n" +
+                        "                        <div class=\"pricing-icon text-center\">\n" +
+                        "                            <img src=\"assets/images/wman.svg\" alt=\"\">\n" +
+                        "                        </div>\n" +
+                        "                        <div class=\"pricing-header text-center\">\n" +
+                        "                            <h5 class=\"sub-title\">" + data[x].title + "</h5>\n" +
+                        "                            <p class=\"month\"><span class=\"price\">" + data[x].price + "€ </span></p>\n" +
+                        "                        </div>\n";
+                    if (sessionStorage.getItem("userRole") == "ADMIN") {
+                        services += "                        <div class=\"pricing-header text-center\">\n" +
+                            " <ul class=\"carousel-btn rounded-buttons\">\n" +
+                            "                                                <li ><a class=\"main-btn rounded-three register-to-visit\"\n" +
+                            "                                                       style=\"background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);\" onclick=getService('" + data[x].id + "') data-toggle=\"modal\" data-target=\"#modalServiceForm\"\n" +
+                            "                                                       href=\"\">Redaguoti</a></li>\n" +
+                            "                                            </ul>";
+                    }
+                    services += "                      </div>\n" +
+                        "                    </div>" +
+                        "                </div>";
+                }
+                if (sessionStorage.getItem("userRole") == "ADMIN") {
 
                     services += "<div class=\"col-lg-4 col-md-7 col-sm-9\">\n" +
                         "                    <div class=\"pricing-style-one mt-40 wow fadeIn\" data-wow-duration=\"1.5s\" data-wow-delay=\"0.2s\">\n" +
@@ -137,15 +351,24 @@
                         "                            <img src=\"assets/images/wman.svg\" alt=\"\">\n" +
                         "                        </div>\n" +
                         "                        <div class=\"pricing-header text-center\">\n" +
-                        "                            <h5 class=\"sub-title\">"+data[x].title+"</h5>\n" +
-                        "                            <p class=\"month\"><span class=\"price\">"+data[x].price+"€ </span></p>\n" +
+                        "                            <h5 class=\"sub-title\">Paslaugos pavadinimas</h5>\n" +
+                        "                            <p class=\"month\"><span class=\"price\">Kaina (€) </span></p>\n" +
                         "                        </div>\n" +
+                        "                        <div class=\"pricing-header text-center\">\n" +
+                        " <ul class=\"carousel-btn rounded-buttons\">\n" +
+                        "                                                <li ><a class=\"main-btn rounded-three register-to-visit\"\n" +
+                        "                                                       style=\"background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);\" data-toggle=\"modal\" onclick='removeError()' data-target=\"#modalServiceNewForm\"\n" +
+                        "                                                       href=\"\">Pridėti naują</a></li>\n" +
+                        "                                            </ul>" +
+                        "                      </div>\n" +
                         "                    </div>" +
                         "                </div>";
                 }
+
                 $('#services-list').html(services);
 
             }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
             });
         }
 
@@ -171,26 +394,368 @@
                 async: false,
             });
             ajaxSendRequest.done(function (data) {
-                console.log(data['user']);
                 sessionStorage.setItem("token", data['token']);
-                sessionStorage.setItem("user", data['user']);
+                token = data['token'];
 
                 $('#modalLoginForm').modal('hide');
                 $(".modal-backdrop").remove();
                 $('#loginButton').attr("style", "display:none");
+                $('#register').attr("style", "display:none");
+                $('#logout').removeAttr("style");
+                $('#logout').attr("style", "-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;");
+                getActiveUser();
                 getServices();
                 getUsers();
                 getVisits();
+                checkPermissionUsers();
+                fillRegister();
+
 
             }).fail(function (textStatus, errorThrown) {
                 $('.bad-login').removeAttr("style");
                 $('.bad-login').attr("style", "color:red");
             });
         }
+
+        function logout() {
+            sessionStorage.removeItem("token");
+            $('#loginButton').removeAttr("style");
+            $('#register').removeAttr("style");
+            $('#logout').attr("style", "display:none");
+            $('.visitRegister').attr("style", "display:none");
+        }
+
+        function changeRole(role, id) {
+            var changeTo = null;
+            if (role == "ADMIN") {
+                changeTo = "USER";
+            } else if (role == "CUSTOMER") {
+                changeTo = "ADMIN";
+            } else if (role == "USER") {
+                changeTo = "CUSTOMER";
+            }
+
+            var info = {
+                "role": changeTo
+            }
+            var ajaxSendRequest = $.ajax({
+                url: window.location.href + 'api/users/' + id,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'PUT',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                var role = 'Nepriskirta';
+                if (data.role == "ADMIN") {
+                    role = 'Adminstratorius';
+                } else if (data.role == "CUSTOMER") {
+                    role = 'Darbuotojas';
+                } else {
+                    role = 'Klientas';
+                }
+                $('#role-place-' + data.id).html(role);
+                $('#role-change-' + data.id).html("<a type='button' class='change-role-button' onclick='changeRole(\"" + data.role + "\",\"" + data.id + "\")'>Pakeisti rolę</a>");
+
+            }).fail(function (textStatus, errorThrown) {
+
+            });
+        }
+
+        function addService() {
+
+            if ($('#service-title').val() == "" || $('#service-price').val() == "") {
+                $('.bad-service-data').removeAttr("style");
+                $('.bad-service-data').attr("style", "color:red");
+                return;
+            }
+
+            var info = {
+                "title": $('#service-title').val(),
+                "price": parseInt($('#service-price').val())
+            }
+            var ajaxSendRequest = $.ajax({
+                url: window.location.href + 'api/services',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'POST',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                getServices();
+                $('#modalServiceNewForm').modal('hide');
+                $(".modal-backdrop").remove();
+                $('.bad-service-data').removeAttr("style");
+
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+            });
+        }
+
+        var tempServiceId = 0;
+
+        function editService(serviceId) {
+
+            if ($('#service-edit-title').val() == "" || $('#service-edit-price').val() == "") {
+                $('.bad-service-data-edit').removeAttr("style");
+                $('.bad-service-data-edit').attr("style", "color:red");
+                return;
+            }
+
+            var info = {
+                "title": $('#service-edit-title').val(),
+                "price": parseInt($('#service-edit-price').val())
+            }
+            var ajaxSendRequest = $.ajax({
+                url: window.location.href + 'api/services/' + tempServiceId,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'PUT',
+                data: JSON.stringify(info),
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+                getServices();
+                $('#modalServiceForm').modal('hide');
+                $(".modal-backdrop").remove();
+                $('.bad-service-data-edit').removeAttr("style");
+
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+            });
+        }
+
+        function getService(serviceId) {
+            removeError();
+            tempServiceId = serviceId;
+            var ajaxSendRequest = $.ajax({
+                url: window.location.href + 'api/services/' + serviceId,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + token
+                },
+                type: 'GET',
+                dataType: 'json',
+                async: false,
+            });
+            ajaxSendRequest.done(function (data) {
+
+                $('#service-edit-title').val(data.title);
+                $('#service-edit-price').val(data.price);
+
+            }).fail(function (textStatus, errorThrown) {
+                checkToken(textStatus.responseJSON);
+            });
+        }
+
+        function checkToken(data) {
+            if (data.code == '401' && data.message == 'Expired JWT Token') {
+                sessionStorage.removeItem("token");
+                sessionStorage.removeItem("userId");
+                sessionStorage.removeItem("userRole");
+                location.reload();
+            }
+        }
+
+        function removeError() {
+            $('.error-info').removeAttr("style");
+            $('.error-info').attr("style", "display:none");
+            $('input').val("");
+        }
+
+        function removeJustError() {
+            $('.error-info').removeAttr("style");
+            $('.error-info').attr("style", "display:none");
+            $('input').val("");
+        }
+
+        function toggleMeniu() {
+
+            var found = false;
+            var classList = $('#navbarEight').attr('class').split(/\s+/);
+            $.each(classList, function (index, item) {
+                if (item === 'show') {
+                    found = true;
+                }
+            });
+
+            if (found) {
+                $('#navbarEight').removeClass('show');
+            } else {
+                $('#navbarEight').addClass('show');
+            }
+
+
+        }
     </script>
-
-
+    <style>
+        .change-role-button:hover {
+            font-weight: 900;
+        }
+    </style>
     <body>
+
+    <div class="modal fade" id="modalServiceNewForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Pridėti naują paslaugą</h4>
+                    <button type="button" id="login-modal-close" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-1">
+                        <label data-error="wrong" data-success="right" for="defaultForm-email">Paslaugos
+                            pavadinimas</label>
+                        <br>
+                        <input type="text" id="service-title" class="form-control ">
+                    </div>
+                    <div class="md-form mb-4">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Kaina</label>
+                        <br>
+                        <input type="number" id="service-price" class="form-control ">
+                    </div>
+                    <div class="bad-service-data error-info" style="display: none; color: red">
+                        Neužpildėte visų duomenų!!!
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-default" onclick="addService()">Išsaugoti</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalServiceForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Redaguoti paslaugą</h4>
+                    <button type="button" id="login-modal-close" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-1">
+                        <label data-error="wrong" data-success="right" for="defaultForm-email">Paslaugos
+                            pavadinimas</label>
+                        <br>
+                        <input type="text" id="service-edit-title" class="form-control ">
+                    </div>
+                    <div class="md-form mb-4">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Kaina</label>
+                        <br>
+                        <input type="number" id="service-edit-price" class="form-control ">
+                    </div>
+                    <div class="bad-service-data-edit error-info" style="display: none; color: red">
+                        Neužpildėte visų duomenų!!!
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-default" onclick="editService()">Išsaugoti</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="modalRegisterVisitForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Registruotis vizitui</h4>
+                    <button type="button" id="login-modal-close" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-1">
+                        <label data-error="wrong" data-success="right" for="defaultForm-email">Darbuotojas</label>
+                        <br>
+                        <select style="width: 100%" id="worker-register">
+                        </select>
+                    </div>
+                    <div class="md-form mb-4">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Paslauga</label>
+                        <br>
+                        <select style="width: 100%" id="service-register">
+                        </select>
+                    </div>
+                    <div class="md-form mb-4">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Data</label>
+                        <input type="datetime-local" id="date-register" class="form-control ">
+                    </div>
+                    <div class="bad-register-visit error-info" style="display: none; color: red">
+                        Neužpildėte visų duomenų!!!
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-default" onclick="registerVisit()">Registruotis</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalRegisterForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
+         aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header text-center">
+                    <h4 class="modal-title w-100 font-weight-bold">Registruotis</h4>
+                    <button type="button" id="login-modal-close" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+
+                <div class="modal-body mx-3">
+                    <div class="md-form mb-1">
+                        <input type="email" id="email-register" autocomplete="off" class="form-control ">
+                        <label data-error="wrong" data-success="right" for="defaultForm-email">El. paštas</label>
+                    </div>
+                    <div class="md-form mb-4">
+                        <input type="password" id="password-register" autocomplete="off" class="form-control ">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Slaptažodis</label>
+                    </div>
+                    <div class="md-form mb-4">
+                        <input type="text" id="name-register" autocomplete="off" class="form-control ">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Vardas</label>
+                    </div>
+                    <div class="md-form mb-4">
+                        <input type="text" id="surname-register" autocomplete="off" class="form-control ">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Pavardė</label>
+                    </div>
+                    <div class="md-form mb-4">
+                        <input type="text" id="dateOfBirth-register" autocomplete="off" class="form-control ">
+                        <label data-error="wrong" data-success="right" for="defaultForm-pass">Gimimo data</label>
+                    </div>
+                    <div class="bad-register error-info" style="display: none; color: red">
+                        Blogi registracijos duomenys!!!
+                    </div>
+                </div>
+                <div class="modal-footer d-flex justify-content-center">
+                    <button class="btn btn-default" onclick="register()">Registruotis</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="modalLoginForm" tabindex="-1" role="dialog" aria-labelledby="myModalLabel"
          aria-hidden="true">
@@ -204,17 +769,16 @@
                 </div>
                 <div class="modal-body mx-3">
                     <div class="md-form mb-1">
-                        <input type="email" id="email" required class="form-control validate">
+                        <input type="text" id="email" class="form-control ">
                         <label data-error="wrong" data-success="right" for="defaultForm-email">El. paštas</label>
                     </div>
                     <div class="md-form mb-4">
-                        <input type="password" id="password" required class="form-control validate">
+                        <input type="password" id="password" class="form-control ">
                         <label data-error="wrong" data-success="right" for="defaultForm-pass">Slaptažodis</label>
                     </div>
-                    <div class="bad-login" style="display: none; color: red">
+                    <div class="bad-login error-info" style="display: none; color: red">
                         Blogi prisijungimo duomenys!!!
                     </div>
-
                 </div>
                 <div class="modal-footer d-flex justify-content-center">
                     <button class="btn btn-default" onclick="login()">Prisijungti</button>
@@ -249,8 +813,9 @@
                                 <img src="assets/images/logo.png" alt="Logo">
                             </a>
 
-                            <button class="navbar-toggler" type="button" data-toggle="collapse"
+                            <button class="navbar-toggler" type="button"
                                     data-target="#navbarEight" aria-controls="navbarEight" aria-expanded="false"
+                                    onclick="toggleMeniu()"
                                     aria-label="Toggle navigation">
                                 <span class="toggler-icon"></span>
                                 <span class="toggler-icon"></span>
@@ -259,20 +824,40 @@
 
                             <div class="collapse navbar-collapse sub-menu-bar" id="navbarEight">
                                 <ul class="navbar-nav ml-auto">
-                                    <li class="nav-item active">
-                                        <a class="page-scroll" href="#home">Pagrindinis</a>
+                                    <li class="nav-item">
+                                        <a class="page-scroll"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           href="#home">Pagrindinis</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="page-scroll" href="#about">Klientai</a>
+                                        <a class="page-scroll"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           href="#about">Žmonės</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="page-scroll" href="#portfolio">Vizitai</a>
+                                        <a class="page-scroll"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           href="#portfolio">Vizitai</a>
                                     </li>
                                     <li class="nav-item">
-                                        <a class="page-scroll" href="#pricing">Paslaugos</a>
+                                        <a class="page-scroll"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           href="#pricing">Paslaugos</a>
                                     </li>
                                     <li class="nav-item" id="loginButton">
-                                        <a href="" data-toggle="modal" data-target="#modalLoginForm">Prisijungti</a>
+                                        <a href="" data-toggle="modal"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           onclick="removeError()" data-target="#modalLoginForm">Prisijungti</a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a class="page-scroll" id="logout"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           onclick="logout()" href="">Atsijungti</a>
+                                    </li>
+                                    <li class="nav-item" id="register">
+                                        <a href="" data-toggle="modal"
+                                           style="-webkit-text-stroke: 1px #63037d; font-size:20px;font-weight: bold;"
+                                           onclick="removeError()" data-target="#modalRegisterForm">Registruotis</a>
                                     </li>
                                 </ul>
                             </div>
@@ -300,9 +885,12 @@
                                         <div class="col-xl-6 col-lg-7 col-sm-10">
                                             <h2 class="carousel-title">Vyriški ir moteriški kirpimai</h2>
                                             <ul class="carousel-btn rounded-buttons">
-                                                <li><a class="main-btn rounded-three"
-                                                       style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
-                                                       href="#">Registruotis</a></li>
+                                                <li class="visitRegister"><a
+                                                            class="main-btn rounded-three register-to-visit"
+                                                            style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
+                                                            data-toggle="modal" data-target="#modalRegisterVisitForm"
+                                                            onclick="removeJustError()"
+                                                            href="">Registruotis</a></li>
                                             </ul>
                                         </div>
                                     </div> <!-- row -->
@@ -317,9 +905,12 @@
                                         <div class="col-xl-6 col-lg-7 col-sm-10">
                                             <h2 class="carousel-title">Plaukų dažymas</h2>
                                             <ul class="carousel-btn rounded-buttons">
-                                                <li><a class="main-btn rounded-three"
-                                                       style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
-                                                       href="#">Registruotis</a></li>
+                                                <li class="visitRegister"><a
+                                                            class="main-btn rounded-three register-to-visit"
+                                                            style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
+                                                            data-toggle="modal" data-target="#modalRegisterVisitForm"
+                                                            onclick="removeJustError()"
+                                                            href="">Registruotis</a></li>
                                             </ul>
                                         </div>
                                     </div> <!-- row -->
@@ -334,9 +925,13 @@
                                         <div class="col-xl-6 col-lg-7 col-sm-10">
                                             <h2 class="carousel-title">Barzdos tvarkymas</h2>
                                             <ul class="carousel-btn rounded-buttons">
-                                                <li><a class="main-btn rounded-three"
+                                                <li class="visitRegister">
+                                                    <a class="main-btn rounded-three register-to-visit"
                                                        style="background: -webkit-linear-gradient(left, #63037d 0%, #e638f9 100%);"
-                                                       href="#">Registruotis</a></li>
+                                                       data-toggle="modal" data-target="#modalRegisterVisitForm"
+                                                       onclick="removeJustError()"
+                                                       href="">Registruotis</a>
+                                                </li>
                                             </ul>
                                         </div>
                                     </div> <!-- row -->
@@ -398,8 +993,10 @@
             <div class="row justify-content-center">
                 <div class="col-xl-6 col-lg-8">
                     <div class="section-title text-center mt-30 pb-40">
-                        <h4 class="title wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="0.6s">Klientai</h4>
-                        <p class="text wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="1s">Šie klientai yra mūsų kirpyklos turtas</p>
+                        <h4 class="title wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="0.6s">Žmonės</h4>
+                        <p class="text wow fadeInUp" data-wow-duration="1.5s" data-wow-delay="1s">Žmonės kurie vertina
+                            mūsų darbą yra be galo svarbūs. Džiaugiamės galėdami pagelbėti, padaryti jūsų šventes dar
+                            nuostabesnes.</p>
                     </div> <!-- section title -->
                 </div>
             </div> <!-- row -->
@@ -419,7 +1016,8 @@
                 <div class="col-lg-6">
                     <div class="section-title text-center pb-20">
                         <h3 class="title">Vizitai</h3>
-                        <p class="text">Kiekvienas kliento apsilankymas yra be galo svarbus mūsų kirpėjams, administracijai. Jų šiluma, bendravimas, meilė yra tai dėl ko mes dirbame kartu</p>
+                        <p class="text">Kiekvienas kliento apsilankymas yra be galo svarbus mūsų kirpėjams,
+                            administracijai. Jų šiluma, bendravimas, meilė yra tai dėl ko mes dirbame kartu</p>
                     </div> <!-- row -->
                 </div>
             </div> <!-- row -->
@@ -440,7 +1038,8 @@
                 <div class="col-lg-6">
                     <div class="section-title text-center pb-20">
                         <h3 class="title">Paslaugos</h3>
-                        <p class="text">Pas mus kirpykloje galite rinktis iš šių paslaugų. Viską atliksime profesionaliai ir užtikrintai. Mūsų kirpykloje dirba tik gerai žinomi žmonės.</p>
+                        <p class="text">Pas mus kirpykloje galite rinktis iš šių paslaugų. Viską atliksime
+                            profesionaliai ir užtikrintai. Mūsų kirpykloje dirba tik gerai žinomi žmonės.</p>
                     </div> <!-- section title -->
                 </div>
             </div> <!-- row -->

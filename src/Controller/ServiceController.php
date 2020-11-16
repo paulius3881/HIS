@@ -404,4 +404,159 @@ class ServiceController extends AbstractController
         $response->setData($data);
         return $response;
     }
+
+    /**
+     * @Route("/services", name="add-service-without-user", methods={"POST"})
+     *
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function addWithoutUserService(Request $request)
+    {
+        $response = new JsonResponse();
+        if ($this->getUser()->getRole() != "ADMIN") {
+            $response->setStatusCode(403);
+            $response->setData(['message' => 'Access denied']);
+            return $response;
+        }
+        $data = json_decode($request->getContent(), true);
+        $notSetColumns = [];
+        $service = null;
+        $isAllDataSet = true;
+
+        if (!isset($data['title'])) {
+            $notSetColumns += ["title" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+        if (!isset($data['price'])) {
+            $notSetColumns += ["price" => 'Column not set'];
+            $isAllDataSet = false;
+        } else {
+            if (!is_int($data['price'])) {
+                $notSetColumns += ["price" => 'Must be int'];
+                $isAllDataSet = false;
+            }
+        }
+        if (!$isAllDataSet) {
+            $response->setStatusCode(400);
+            $response->setData($notSetColumns);
+            return $response;
+        }
+
+        $service = new Service();
+        $service->setTitle($data['title']);
+        $service->setPrice($data['price']);
+
+        $this->entityManagerInterface->persist($service);
+        $this->entityManagerInterface->flush();
+        $response->setStatusCode(200);
+        $response->setData(
+            [
+                'id' => $service->getId(),
+                'title' => $service->getTitle(),
+                'price' => $service->getPrice(),
+            ]
+        );
+
+        return $response;
+    }
+
+    /**
+     * @Route("/services/{serviceId}", name="get-one-service", methods={"GET"})
+     *
+     * @param int $serviceId
+     * @return JsonResponse
+     */
+    public function getOneSService(int $serviceId)
+    {
+        $response = new JsonResponse();
+        if ($this->getUser()->getRole() != "ADMIN") {
+            $response->setStatusCode(403);
+            $response->setData(['message' => 'Access denied']);
+            return $response;
+        }
+
+        $service = $this->serviceRepository->findOneBy(['id' => $serviceId]);
+        if (!empty($service)) {
+            $response->setData(
+                [
+                    'id' => $service->getId(),
+                    'price' => $service->getPrice(),
+                    'title' => $service->getTitle(),
+                ]
+            );
+        } else {
+            $response->setStatusCode(404);
+            $response->setData(
+                [
+                    "message" => "Service with id: " . $serviceId . " not found"
+                ]);
+
+        }
+
+        return $response;
+    }
+
+    /**
+     * @Route("/services/{serviceId}", name="edit-service-one", methods={"PUT"})
+     *
+     * @param Request $request
+     * @param Service $service
+     * @return JsonResponse
+     */
+    public function editServiceOne(Request $request, int $serviceId)
+    {
+        $response = new JsonResponse();
+        if ($this->getUser()->getRole() != "ADMIN") {
+            $response->setStatusCode(403);
+            $response->setData(['message' => 'Access denied']);
+            return $response;
+        }
+        $data = json_decode($request->getContent(), true);
+        $notSetColumns = [];
+        $isAllDataSet = true;
+
+        $service = $this->serviceRepository->findOneBy(['id'=>$serviceId]);
+        if(empty($service)){
+
+            $response->setStatusCode(404);
+            $response->setData(['message'=>'Servie not found']);
+        }
+
+
+        if (!isset($data['title'])) {
+            $notSetColumns += ["title" => 'Column not set'];
+            $isAllDataSet = false;
+        }
+        if (!isset($data['price'])) {
+            $notSetColumns += ["price" => 'Column not set'];
+            $isAllDataSet = false;
+        } else {
+            if (!is_int($data['price'])) {
+                $notSetColumns += ["price" => 'Must be int'];
+                $isAllDataSet = false;
+            }
+        }
+        if (!$isAllDataSet) {
+            $response->setStatusCode(400);
+            $response->setData($notSetColumns);
+            return $response;
+        }
+
+        $service->setTitle($data['title']);
+        $service->setPrice($data['price']);
+
+        $this->entityManagerInterface->persist($service);
+        $this->entityManagerInterface->flush();
+        $response->setStatusCode(200);
+        $response->setData(
+            [
+                'id' => $service->getId(),
+                'title' => $service->getTitle(),
+                'price' => $service->getPrice(),
+            ]
+        );
+
+        return $response;
+    }
 }

@@ -49,18 +49,26 @@ class UserController extends AbstractController
      */
     public function getUsersList()
     {
-        $user = $this->getUser();
-        if ($user->getRole() == "USER") {
-            $response = new JsonResponse();
-            $response->setStatusCode(403);
-            $response->setData(
-                [
-                    "message" => "Access denied. For user with role " . $user->getRole()
-                ]);
-            return $response;
-        } else if ($user->getRole() == "CUSTOMER") {
+        if ($this->getUser()->getRole() == "CUSTOMER") {
             $data = [];
-            foreach ($this->userRepository->findBy(['role' => 'USER']) as $user) {
+            foreach ($this->userRepository->findBy(['role' => 'CLIENT']) as $user) {
+                $data[] =
+                    [
+                        'id' => $user->getId(),
+                        'email' => $user->getEmail(),
+                        'name' => $user->getName(),
+                        'surname' => $user->getSurname(),
+                        'dateOfBirth' => $user->getDateOfBirth(),
+                        'role' => $user->getRole(),
+                    ];
+            }
+            $response = new JsonResponse();
+            $response->setStatusCode(200);
+            $response->setData($data);
+            return $response;
+        }else if ($this->getUser()->getRole() == "CLIENT") {
+            $data = [];
+            foreach ($this->userRepository->findBy(['role' => 'CUSTOMER']) as $user) {
                 $data[] =
                     [
                         'id' => $user->getId(),
@@ -124,7 +132,7 @@ class UserController extends AbstractController
     }
 
     /**
-     * @Route("/users", name="add-user", methods={"POST"})
+     * @Route("/users/register", name="add-user", methods={"POST"})
      *
      * @param Request $request
      * @param UserPasswordEncoderInterface $encoder
@@ -132,17 +140,6 @@ class UserController extends AbstractController
      */
     public function addUser(Request $request,UserPasswordEncoderInterface $encoder)
     {
-        $user = $this->getUser();
-        if ($user->getRole() != "ADMIN") {
-            $response = new JsonResponse();
-            $response->setStatusCode(403);
-            $response->setData(
-                [
-                    "message" => "Access denied. For user with role " . $user->getRole()
-                ]);
-            return $response;
-        }
-
         $response = new JsonResponse();
         $data = json_decode($request->getContent(), true);
         $isAllDataSet = true;
@@ -275,6 +272,7 @@ class UserController extends AbstractController
         $user = $this->userRepository->findOneBy(['id' => $userId]);
         $notSetColumns = [];
         $isAllDataSet = true;
+        $setPassword = true;
 
         if (empty($user)) {
             $response->setStatusCode(404);
@@ -285,7 +283,7 @@ class UserController extends AbstractController
             return $response;
         }
 
-        if (isset($data['name']) || isset($data['surname']) || isset($data['dateOfBirth'])) {
+        if (isset($data['name']) || isset($data['surname']) || isset($data['dateOfBirth']) || isset($data['role'])) {
             $response->setStatusCode(200);
         } else {
             $response->setData(
@@ -303,6 +301,9 @@ class UserController extends AbstractController
         if (isset($data['surname'])) {
             $user->setSurname($data['surname']);
         }
+        if (isset($data['role'])) {
+            $user->setRole($data['role']);
+        }
         if (isset($data['dateOfBirth'])) {
             $user->setDateOfBirth($data['dateOfBirth']);
         }
@@ -311,17 +312,25 @@ class UserController extends AbstractController
                 if (!isset($data['newPassword'])) {
                     $notSetColumns += ["newPassword" => 'Column not set'];
                     $isAllDataSet = false;
+                    $setPassword = false;
                 }else{
                     if(empty($data['newPassword'])){
                         $notSetColumns += ["newPassword" => 'New password can not be empty'];
                         $isAllDataSet = false;
+                        $setPassword = false;
                     }
                 }
             }else{
                 $notSetColumns += ["newPassword" => 'Password not match with old'];
                 $isAllDataSet = false;
+                $setPassword = false;
+            }
+            if($setPassword){
+                $user->setPassword($encoder->encodePassword($user, $data['newPassword']));
             }
         }
+
+
 
         if (!$isAllDataSet) {
             $response->setData($notSetColumns);
@@ -329,8 +338,6 @@ class UserController extends AbstractController
 
             return $response;
         }
-
-        $user->setPassword($encoder->encodePassword($user, $data['newPassword']));
 
         $this->entityManagerInterface->persist($user);
         $this->entityManagerInterface->flush();
@@ -344,6 +351,34 @@ class UserController extends AbstractController
                 'dateOfBirth' => $user->getDateOfBirth(),
                 'role' => $user->getRole(),
             ]);
+
+        return $response;
+    }
+
+    /**
+     * @Route("/activeUser", name="get-active-user", methods={"GET"})
+     *
+     * @return JsonResponse
+     */
+    public function getActiveUser()
+    {
+        $response = new JsonResponse();
+        if($this->getUser()==null){
+            $response->setData(['message'=>'Unauthorized']);
+            $response->setStatusCode(401);
+            return $response;
+        }
+        $response->setData(
+            [
+                'id' => $this->getUser()->getId(),
+                'email' => $this->getUser()->getEmail(),
+                'name' => $this->getUser()->getName(),
+                'surname' => $this->getUser()->getSurname(),
+                'dateOfBirth' => $this->getUser()->getDateOfBirth(),
+                'role' => $this->getUser()->getRole(),
+            ]
+        );
+        $response->setStatusCode(200);
 
         return $response;
     }

@@ -71,9 +71,10 @@ class VisitController extends AbstractController
                 [
                     'id' => $visit->getId(),
                     'time' => $visit->getTime(),
-                    'serviceId' => empty($visit->getService()) ? null : $visit->getService()->getId(),
-                    'workerId' => empty($visit->getWorker()) ? null : $visit->getWorker()->getId(),
-                    'clientId' => empty($visit->getClient()) ? null : $visit->getClient()->getId(),
+                    'serviceTitle' => empty($visit->getService()) ? null : $visit->getService()->getTitle(),
+                    'servicePrice' => empty($visit->getService()) ? null : $visit->getService()->getPrice(),
+                    'workerName' => empty($visit->getWorker()) ? null : $visit->getWorker()->getName(),
+                    'clientName' => empty($visit->getClient()) ? null : $visit->getClient()->getName(),
                 ];
         }
 
@@ -389,7 +390,16 @@ class VisitController extends AbstractController
     public function getAllVisitsList()
     {
         $data = [];
-        foreach ($this->visitRepository->findAll() as $visit) {
+
+        if ($this->getUser()->getRole() == "ADMIN") {
+            $visits = $this->visitRepository->findAll();
+        } else if ($this->getUser()->getRole() == "CUSTOMER") {
+            $visits = $this->visitRepository->findBy(['worker' => $this->getUser()]);
+        } else {
+            $visits = $this->visitRepository->findBy(['client' => $this->getUser()]);
+        }
+
+        foreach ($visits as $visit) {
             $data[] =
                 [
                     'id' => $visit->getId(),
